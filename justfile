@@ -3,3 +3,7 @@ build:
 
 install: build
   pip3 install --force-reinstall dist/waterline-*
+
+
+test:
+  @python3 -m tests
