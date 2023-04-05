@@ -3,7 +3,7 @@ import subprocess
 
 
 def run_command(args: list[str]):
-  print('running command', args)
+  print('running command', ' '.join(map(str, args)))
   output = subprocess.check_output(args)
 
 

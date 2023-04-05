@@ -48,11 +48,43 @@ class NAS(Suite):
       cfg.write(f'C_LIB = -lm\n')
       cfg.write(f'C_INC = -I../common\n')
       if self.enable_openmp:
-        cfg.write(f'C_FLAGS = -O3 -fPIC -fopenmp\n')
+        cfg.write(f'CFLAGS = -O3 -fPIC -fopenmp\n')
       else:
-        cfg.write(f'C_FLAGS = -O3 -fPIC\n')
+        cfg.write(f'CFLAGS = -O3 -fPIC\n')
       cfg.write('CLINKFLAGS = -fPIC -lm -fopenmp\n')
       cfg.write('UCC = cc -O\n')
       cfg.write('BINDIR	= ../bin\n')
       cfg.write('RAND	= randdp\n')
       cfg.write('WTIME	= wtime.c\n')
+
+
+class GAPBenchmark(Benchmark):
+  def compile(self, suite_path: Path, output: Path):
+    """
+    Compile this benchmark to a certain output directory
+    """
+    print(f'compile {self.name} to {output}')
+
+    source_file = suite_path / 'src' / (self.name + '.cc')
+    print(source_file)
+    run_command(['gclang++', source_file, '-fopenmp', '-std=c++11',
+                '-O3', '-Wall', '-o', output])
+
+
+class GAP(Suite):
+  def __init__(self, enable_openmp: bool = True):
+    super().__init__('GAP')
+    self.enable_openmp = enable_openmp
+
+    self.add_benchmark(GAPBenchmark, 'bc')
+    self.add_benchmark(GAPBenchmark, 'bfs')
+    self.add_benchmark(GAPBenchmark, 'cc')
+    self.add_benchmark(GAPBenchmark, 'cc_sv')
+    self.add_benchmark(GAPBenchmark, 'converter')
+    self.add_benchmark(GAPBenchmark, 'pr')
+    self.add_benchmark(GAPBenchmark, 'pr_spmv')
+    self.add_benchmark(GAPBenchmark, 'sssp')
+    self.add_benchmark(GAPBenchmark, 'tc')
+
+  def acquire(self, path: Path):
+    waterline.utils.git_clone('https://github.com/sbeamer/gapbs.git', path)
