@@ -46,8 +46,19 @@ class Suite:
         """
         pass
 
-    def add_benchmark(self, benchmark, name: str, **kwargs):
-        self.benchmarks.append(benchmark(self, name, **kwargs))
+    def add_benchmark(self, benchmark, name: str, *args):
+        self.benchmarks.append(benchmark(self, name, *args))
+
+    def compile(self, suite_src: Path, suite_bin: Path):
+        """
+        Compile each of the benchmarks in the suite. By default this 
+        simply defers to each benchmark, but it could do it some other
+        way if the suite has a goofy build system.
+        """
+        for benchmark in self.benchmarks:
+            bench_bin_dir = suite_bin / benchmark.name
+            bench_bin_dir.mkdir(exist_ok=True)
+            benchmark.compile(suite_src, bench_bin_dir / 'raw')
 
 
 class Benchmark:
@@ -62,3 +73,9 @@ class Benchmark:
         """
         Compile this benchmark to a certain output directory
         """
+
+    def link(self, bitcode: Path, destination: Path):
+        """
+        Link a bitcode file of this benchmark into a complete executable.
+        """
+        print(f'link {bitcode} to {destination} not implemented')

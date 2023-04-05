@@ -1,6 +1,7 @@
 from pathlib import Path
 from .suite import Suite
 from .utils import *
+from .pipeline import *
 
 
 class Workspace:
@@ -41,8 +42,8 @@ class Workspace:
             suite_source = self.src_dir / suite.name
             suite_bin = self.bin_dir / suite.name
             suite_bin.mkdir(exist_ok=True)
-            for benchmark in suite.benchmarks:
-                benchmark.compile(suite_source, suite_bin / benchmark.name)
+            suite.compile(suite_source, suite_bin)
+
 
     def get_bitcode(self):
         for suite in self.suites:
@@ -54,10 +55,22 @@ class Workspace:
                 benchmark_ir_dir = suite_ir / benchmark.name
                 benchmark_ir_dir.mkdir(exist_ok=True)
 
-                benchmark_bin = suite_bin / benchmark.name
+                benchmark_bin = suite_bin / benchmark.name / 'raw'
 
                 # defer to gclang, as usual
                 run_command(
                     ['get-bc', '-o', benchmark_ir_dir / 'input.bc', benchmark_bin])
                 run_command(
                     ['llvm-dis', benchmark_ir_dir / 'input.bc'])
+
+    def run_pipeline(self, pipeline: Pipeline):
+        for suite in self.suites:
+          suite_ir = self.ir_dir / suite.name
+          for benchmark in suite.benchmarks:
+            benchmark_ir_dir = suite_ir / benchmark.name
+            benchmark_ir_input = benchmark_ir_dir / 'input.bc'
+
+            output = benchmark_ir_dir / f'{pipeline.name}.bc'
+            pipeline.run(benchmark_ir_input, output, benchmark)
+            benchmark_link_dest = self.bin_dir / suite.name / benchmark.name / pipeline.name
+            benchmark.link(output, benchmark_link_dest)

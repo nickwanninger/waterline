@@ -7,3 +7,7 @@ install: build
 
 test:
   @python3 -m tests
+
+
+upload: build
+	python3 -m twine upload --repository pypi dist/*
