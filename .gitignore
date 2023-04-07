@@ -127,3 +127,4 @@ venv.bak/
 dmypy.json
 
 test_workspace
+/ws/
