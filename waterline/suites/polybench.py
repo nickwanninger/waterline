@@ -59,6 +59,7 @@ class PolyBenchBenchmark(Benchmark):
         self.shell(
             "gclang",
             "-DLARGE_DATASET",
+            # "-DSMALL_DATASET",
             "-DPOLYBENCH_TIME",
             *baseline_flags,
             f"-I{self.suite.src}/utilities",

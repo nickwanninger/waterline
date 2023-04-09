@@ -1,13 +1,22 @@
 from pathlib import Path
 from .suite import Suite
-from .utils import *
-from .pipeline import *
-from typing import Tuple, List
+from .pipeline import Pipeline
+from typing import Tuple, List, Dict, Optional
 from . import jobs
+import waterline.utils
+import subprocess
+from .run import Runner
 
 
 class Workspace:
     suites: List[Suite] = []
+
+    dir: Path
+    src_dir: Path
+    bin_dir: Path
+    ir_dir: Path
+
+    pipelines: Dict[str, Pipeline] = {}
 
     def __init__(self, dir: str):
         self.dir = Path(dir).absolute()
@@ -22,6 +31,14 @@ class Workspace:
 
         self.ir_dir = self.dir / "ir"
         self.ir_dir.mkdir(exist_ok=True)
+
+        self.add_pipeline(Pipeline("baseline"))
+
+    def benchmarks(self):
+        """iterate over each benchmark"""
+        for suite in self.suites:
+            for bench in suite.benchmarks:
+                yield bench
 
     def add_suite(self, suite, *args, **kwargs):
         s = suite(self)
@@ -38,92 +55,120 @@ class Workspace:
         self.shell("get-bc", "-o", output, input)
         self.shell("llvm-dis", output)
 
+    def add_pipeline(self, pipeline):
+        self.pipelines[pipeline.name] = pipeline
+
     def prepare(self):
         """Prepare this workspace to have bitcode pipeline applied."""
-        # a list of jobs to work on. This will be appended to and
-        # worked through before a pipeline can run.
-        runner = jobs.JobRunner()
 
-        # first, make sure all the benchmarks are acquired. We just do this by
-        # checking if the directory of the suite exists.
-        for suite in self.suites:
-            if not suite.src.exists():
-                runner.add(jobs.FunctionJob(f"acquire {suite.name}", suite.acquire))
-        runner.title = "acquire suites"
-        runner.run(parallel=True)
+        with waterline.utils.cd(self.dir):
+            # a list of jobs to work on. This will be appended to and
+            # worked through before a pipeline can run.
+            runner = jobs.JobRunner()
 
-        # second, compile the a.out files for each benchmark suite. If the a.out
-        # file doesn't exist, add it to the job list.
-        for suite in self.suites:
-            suite_bin = self.bin_dir / suite.name
-            suite_bin.mkdir(exist_ok=True)
-            for job in suite.compile_jobs():
-                runner.add(job)
-        runner.title = "compile baseline"
-        runner.run(parallel=True)
+            # first, make sure all the benchmarks are acquired. We just do this by
+            # checking if the directory of the suite exists.
+            for suite in self.suites:
+                if not suite.src.exists():
+                    runner.add(jobs.FunctionJob(f"acquire {suite.name}", suite.acquire))
+            runner.title = "acquire suites"
+            runner.run(parallel=True)
 
-        # Third, make sure input.bc exists in each ir/<suite>/<benchmark>/ folder
-        for suite in self.suites:
-            suite_ir = self.ir_dir / suite.name
-            suite_ir.mkdir(exist_ok=True)
-            suite_bin = self.bin_dir / suite.name
-            suite_bin.mkdir(exist_ok=True)
-            for benchmark in suite.benchmarks:
-                benchmark_ir_dir = suite_ir / benchmark.name
-                benchmark_ir_dir.mkdir(exist_ok=True)
+            # second, compile the a.out files for each benchmark suite. If the a.out
+            # file doesn't exist, add it to the job list.
+            for suite in self.suites:
+                suite_bin = self.bin_dir / suite.name
+                suite_bin.mkdir(exist_ok=True)
+                for job in suite.compile_jobs():
+                    runner.add(job)
+            runner.title = "compile baseline"
+            runner.run(parallel=True)
 
-                input = suite_bin / benchmark.name / "a.out"
-                output = benchmark_ir_dir / "input.bc"
-                if not output.exists():
-                    runner.add(
-                        jobs.FunctionJob(
-                            f"extract {suite.name}/{benchmark.name}",
-                            self.extract_bitcode,
-                            input,
-                            output,
+            # Third, make sure input.bc exists in each ir/<suite>/<benchmark>/ folder
+            for suite in self.suites:
+                suite_ir = self.ir_dir / suite.name
+                suite_ir.mkdir(exist_ok=True)
+                suite_bin = self.bin_dir / suite.name
+                suite_bin.mkdir(exist_ok=True)
+                for benchmark in suite.benchmarks:
+                    benchmark_ir_dir = suite_ir / benchmark.name
+                    benchmark_ir_dir.mkdir(exist_ok=True)
+
+                    input = suite_bin / benchmark.name / "a.out"
+                    output = benchmark_ir_dir / "input.bc"
+                    if not output.exists():
+                        runner.add(
+                            jobs.FunctionJob(
+                                f"extract {suite.name}/{benchmark.name}",
+                                self.extract_bitcode,
+                                input,
+                                output,
+                            )
                         )
-                    )
-        runner.title = "extract bitcode"
-        runner.run()
+            runner.title = "extract bitcode"
+            runner.run()
 
     def run_pipeline(self, pipeline: Pipeline):
         """Run a pipeline over the bitcodes of each benchmark in this workspace"""
         # Make sure everything is setup!
         self.prepare()
-        # Now run the pipeline on every benchmark's IR
-        runner = jobs.JobRunner(f"pipeline: {pipeline.name}")
 
-        for suite in self.suites:
-            suite_ir = self.ir_dir / suite.name
-            for benchmark in suite.benchmarks:
-                benchmark_ir_dir = suite_ir / benchmark.name
-                benchmark_ir_input = benchmark_ir_dir / "input.bc"
+        with waterline.utils.cd(self.dir):
+            # Now run the pipeline on every benchmark's IR
+            runner = jobs.JobRunner(f"pipeline: {pipeline.name}")
 
-                output = benchmark_ir_dir / f"{pipeline.name}.bc"
-                runner.add(*pipeline.create_jobs(benchmark_ir_input, output, benchmark))
-                benchmark_link_dest = (
-                    self.bin_dir / suite.name / benchmark.name / pipeline.name
-                )
+            for suite in self.suites:
+                suite_ir = self.ir_dir / suite.name
+                for benchmark in suite.benchmarks:
+                    benchmark_ir_dir = suite_ir / benchmark.name
+                    benchmark_ir_input = benchmark_ir_dir / "input.bc"
 
-                runner.add(
-                    jobs.FunctionJob(
-                        f"link {suite.name}/{benchmark.name}",
-                        benchmark.link_bitcode,
-                        output,
-                        benchmark_link_dest,
+                    output = benchmark_ir_dir / f"{pipeline.name}.bc"
+                    runner.add(
+                        *pipeline.create_jobs(benchmark_ir_input, output, benchmark)
                     )
-                )
+                    benchmark_link_dest = (
+                        self.bin_dir / suite.name / benchmark.name / pipeline.name
+                    )
 
-        runner.run(parallel=False)
+                    runner.add(
+                        jobs.FunctionJob(
+                            f"link {suite.name}/{benchmark.name}",
+                            benchmark.link_bitcode,
+                            output,
+                            benchmark_link_dest,
+                        )
+                    )
 
-    def run(self):
+            runner.run(parallel=False)
+
+    def run(self, pipeline_names: Optional[List[str]] = None, runs=1, runner=Runner()):
+        if pipeline_names is None:
+            pipeline_names = self.pipelines.keys()
+
+        pipelines: List[Pipeline] = [self.pipelines[name] for name in pipeline_names]
+
+        for pl in pipelines:
+            self.run_pipeline(pl)
         configs = []
-        for suite in self.suites:
-            for benchmark in suite.benchmarks:
-                for config in benchmark.run_configs():
-                    configs.append((benchmark, config))
-
-        print(configs)
+        for benchmark in self.benchmarks():
+            for config in benchmark.run_configs():
+                configs.append((benchmark, config))
+        print(f"benchmark,{','.join(map(lambda p: p.name, pipelines))}")
+        for benchmark, config in configs:
+            dir: Path = benchmark.suite.bin / benchmark.name
+            for i in range(runs):
+                times = []
+                for pipeline in pipelines:
+                    binary = dir / pipeline.name
+                    if not binary.exists():
+                        raise RuntimeError("binary does not exist!")
+                    time = runner.run(self, config, binary)
+                    times.append(time)
+                    # print(f"{benchmark.name},{profile},{time}")
+                print(
+                    f"{benchmark.suite.name}.{config.name},{','.join(map(str, times))}"
+                )
 
     def shell(self, *args):
         # print('running: ', *args)

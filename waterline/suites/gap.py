@@ -1,4 +1,4 @@
-from waterline import Suite, Benchmark, Workspace
+from waterline import Suite, Benchmark, Workspace, RunConfiguration
 from waterline.utils import run_command
 from pathlib import Path
 
@@ -28,6 +28,10 @@ class GAPBenchmark(Benchmark):
             output,
         )
 
+    def run_configs(self):
+        print("generating run configs for GAP")
+        yield RunConfiguration(self.name, args=["-g", "14"])
+
 
 class GAP(Suite):
     name = "GAP"
@@ -39,7 +43,7 @@ class GAP(Suite):
         self.add_benchmark(GAPBenchmark, "bfs")
         self.add_benchmark(GAPBenchmark, "cc")
         self.add_benchmark(GAPBenchmark, "cc_sv")
-        self.add_benchmark(GAPBenchmark, "converter")
+        # self.add_benchmark(GAPBenchmark, "converter")
         self.add_benchmark(GAPBenchmark, "pr")
         self.add_benchmark(GAPBenchmark, "pr_spmv")
         self.add_benchmark(GAPBenchmark, "sssp")

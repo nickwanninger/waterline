@@ -1,4 +1,4 @@
-from waterline import Suite, Benchmark, Workspace
+from waterline import Suite, Benchmark, Workspace, RunConfiguration
 from waterline.utils import run_command
 from pathlib import Path
 import waterline.utils
