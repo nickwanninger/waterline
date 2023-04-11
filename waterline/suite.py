@@ -107,7 +107,7 @@ class Benchmark:
         using `self.link()`
         """
         object = bitcode.parent / (bitcode.stem + ".o")
-        self.shell("llc", "-O3", bitcode, "--filetype=obj", "-o", object)
+        self.shell("llc", "-relocation-model=pic", "-O3", bitcode, "--filetype=obj", "-o", object)
 
         self.link(object, destination)
         pass

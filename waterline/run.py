@@ -3,7 +3,7 @@ from pathlib import Path
 import subprocess
 import time
 import waterline.utils
-
+import os
 
 class RunConfiguration:
     def __init__(self, name, args=[], env={}, cwd=None):
@@ -25,14 +25,16 @@ class Runner:
         """Run the benchmark, and return the metric. By default, it returns the execution time"""
         assert binary.exists()
 
-        with waterline.utils.cd(config.cwd):
+
+        cwd = os.getcwd() if config.cwd is None else config.cwd
+        with waterline.utils.cd(cwd):
             start = time.time()
             proc = subprocess.Popen(
                 [binary, *config.args],
                 stdout=subprocess.DEVNULL,
                 # stderr=subprocess.DEVNULL,
                 env=config.env,
-                cwd=config.cwd,
+                cwd=cwd,
             )
             res = proc.wait()
             print(res)
