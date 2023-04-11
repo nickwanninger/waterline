@@ -29,7 +29,6 @@ class GAPBenchmark(Benchmark):
         )
 
     def run_configs(self):
-        print("generating run configs for GAP")
         yield RunConfiguration(self.name, args=["-g", "14"])
 
 

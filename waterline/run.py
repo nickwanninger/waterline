@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import subprocess
 import time
+import waterline.utils
 
 
 class RunConfiguration:
@@ -24,14 +25,16 @@ class Runner:
         """Run the benchmark, and return the metric. By default, it returns the execution time"""
         assert binary.exists()
 
-        start = time.time()
-        proc = subprocess.Popen(
-            [binary, *config.args],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            env=config.env,
-            cwd=config.cwd,
-        )
-        proc.wait()
-        end = time.time()
+        with waterline.utils.cd(config.cwd):
+            start = time.time()
+            proc = subprocess.Popen(
+                [binary, *config.args],
+                stdout=subprocess.DEVNULL,
+                # stderr=subprocess.DEVNULL,
+                env=config.env,
+                cwd=config.cwd,
+            )
+            res = proc.wait()
+            print(res)
+            end = time.time()
         return end - start

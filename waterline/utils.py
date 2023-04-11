@@ -16,12 +16,12 @@ def cd(newdir):
 
 
 def run_command(args: list[str]):
-    print("running command", " ".join(map(str, args)))
-    output = subprocess.check_output(args)
+    proc = subprocess.Popen(args)
+    proc.wait()
 
 
-def shell(commnad: str):
-    run_command(["sh", "-c", commnad])
+def shell(cmd: str):
+    run_command(["sh", "-c", cmd])
 
 
 def git_clone(url: str, destination: Path):

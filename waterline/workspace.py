@@ -1,6 +1,6 @@
 from pathlib import Path
 from .suite import Suite
-from .pipeline import Pipeline
+from .pipeline import Pipeline, NopStage
 from typing import Tuple, List, Dict, Optional
 from . import jobs
 import waterline.utils
@@ -32,7 +32,9 @@ class Workspace:
         self.ir_dir = self.dir / "ir"
         self.ir_dir.mkdir(exist_ok=True)
 
-        self.add_pipeline(Pipeline("baseline"))
+        baseline = Pipeline("baseline")
+        baseline.add_stage(NopStage())
+        self.add_pipeline(baseline)
 
     def benchmarks(self):
         """iterate over each benchmark"""
@@ -124,21 +126,9 @@ class Workspace:
                     benchmark_ir_input = benchmark_ir_dir / "input.bc"
 
                     output = benchmark_ir_dir / f"{pipeline.name}.bc"
-                    runner.add(
-                        *pipeline.create_jobs(benchmark_ir_input, output, benchmark)
-                    )
-                    benchmark_link_dest = (
-                        self.bin_dir / suite.name / benchmark.name / pipeline.name
-                    )
 
-                    runner.add(
-                        jobs.FunctionJob(
-                            f"link {suite.name}/{benchmark.name}",
-                            benchmark.link_bitcode,
-                            output,
-                            benchmark_link_dest,
-                        )
-                    )
+                    for job in pipeline.jobs(benchmark_ir_input, output, benchmark):
+                        runner.add(job)
 
             runner.run(parallel=False)
 
@@ -150,6 +140,7 @@ class Workspace:
 
         for pl in pipelines:
             self.run_pipeline(pl)
+
         configs = []
         for benchmark in self.benchmarks():
             for config in benchmark.run_configs():
@@ -165,7 +156,6 @@ class Workspace:
                         raise RuntimeError("binary does not exist!")
                     time = runner.run(self, config, binary)
                     times.append(time)
-                    # print(f"{benchmark.name},{profile},{time}")
                 print(
                     f"{benchmark.suite.name}.{config.name},{','.join(map(str, times))}"
                 )

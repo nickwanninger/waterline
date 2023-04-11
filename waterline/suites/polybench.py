@@ -58,8 +58,7 @@ class PolyBenchBenchmark(Benchmark):
         source_file = self.suite.src / self.source
         self.shell(
             "gclang",
-            "-DLARGE_DATASET",
-            # "-DSMALL_DATASET",
+            f"-D{self.suite.size}_DATASET",
             "-DPOLYBENCH_TIME",
             *baseline_flags,
             f"-I{self.suite.src}/utilities",
@@ -79,7 +78,8 @@ class PolyBenchBenchmark(Benchmark):
 class PolyBench(Suite):
     name = "PolyBench"
 
-    def configure(self):
+    def configure(self, size="LARGE"):
+        self.size = size
         for source, name in polybench_benchmarks:
             self.add_benchmark(PolyBenchBenchmark, name, source)
 
@@ -92,6 +92,3 @@ class PolyBench(Suite):
 
         shutil.unpack_archive(tarball, self.src.parent, "gztar")
         shutil.move(self.src.parent / "polybench-3.1", self.src)
-        # waterline.utils.shell(f'tar xf {out} -C {path.parent}')
-
-        # shutil.(out / 'polybench-3.1', path)

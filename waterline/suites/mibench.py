@@ -1,7 +1,8 @@
-from waterline import Suite, Benchmark, Workspace
+from waterline import Suite, Benchmark, Workspace, RunConfiguration
 from waterline.utils import run_command
 from pathlib import Path
 import shutil
+from typing import List
 
 
 class MiBenchSimple(Benchmark):
@@ -12,9 +13,11 @@ class MiBenchSimple(Benchmark):
     source_files = []
     compile_flags = []
 
-    def __init__(self, suite, name, source, **kwargs):
+    runs: List[RunConfiguration] = []
+
+    def __init__(self, suite, name, source: Path, **kwargs):
         super().__init__(suite, name)
-        self.source = self.suite.src / source
+        self.source: Path = self.suite.src / source
         self.__dict__.update(kwargs)
 
     def compile(self, output: Path):
@@ -34,6 +37,11 @@ class MiBenchSimple(Benchmark):
             "-o",
             output,
         )
+
+    def run_configs(self):
+        for run in self.runs:
+            run.cwd = self.source
+            yield run
 
 
 class MiBenchMakefile(Benchmark):
@@ -65,38 +73,6 @@ class MiBenchMakefile(Benchmark):
             output,
         )
 
-
-mibench_benchmarks = [
-    # automotive/basicmath
-    ("basicmath",),  # has patch
-    # automotive/bincount
-    ("bitcnts",),  # has patch
-    # automotive/susan
-    ("susan_s",),  # has patch
-    ("susan_e",),  # has patch
-    ("susan_c",),  # has patch
-    # consumer/jpeg
-    ("djpeg",),  # has patch
-    ("cjpeg",),  # has patch
-    # telecom/FFT
-    ("fft",),  # has patch
-    ("fft_inv",),  # has patch
-    # telecom/CRC32
-    # security/blowfish
-    ("bf_d",),
-    ("bf_e",),
-    # office/stringsearch
-    ("search",),
-    ("rawdaudio",),
-    ("rawcaudio",),
-    ("untoast",),
-    ("toast",),
-    # working on:
-    # done:
-    ("sha",),  # security/sha
-    ("crc",),  # telecomm/CRC32
-    ("qsort",),  # automotive/qsort
-]
 
 toast_sources = [
     "src/add.c",
@@ -179,11 +155,12 @@ class MiBench(Suite):
     name = "MiBench"
 
     def configure(self):
+        size = "large"
         # AUTOMOTIVE
         self.simple(
             "automotive/basicmath",
             "basicmath",
-            source_files=["basicmath_large.c", "rad2deg.c", "cubic.c", "isqrt.c"],
+            source_files=[f"basicmath_{size}.c", "rad2deg.c", "cubic.c", "isqrt.c"],
         )
 
         self.simple(
@@ -206,10 +183,28 @@ class MiBench(Suite):
             "qsort",
             linker_flags=["-lm"],
             compile_flags=["-lm"],
-            source_files=["qsort_large.c"],
+            source_files=[f"qsort_{size}.c"],
+            runs=[RunConfiguration("qsort", args=[f"input_{size}.dat"])],
         )
-        self.simple("automotive/susan", "susan", source_files=["susan.c"])
-
+        self.simple(
+            "automotive/susan",
+            "susan",
+            source_files=["susan.c"],
+            runs=[
+                RunConfiguration(
+                    "susan_s",
+                    args=[f"input_{size}.pgm", f"output_{size}.smoothing.pgm", "-s"],
+                ),
+                RunConfiguration(
+                    "susan_e",
+                    args=[f"input_{size}.pgm", f"output_{size}.edges.pgm", "-e"],
+                ),
+                RunConfiguration(
+                    "susan_c",
+                    args=[f"input_{size}.pgm", f"output_{size}.corners.pgm", "-c"],
+                ),
+            ],
+        )
         # CONSUMER
         # TODO: jpeg
         # TODO: lame
@@ -221,22 +216,22 @@ class MiBench(Suite):
         # TODO: tiffmedian
         # TODO: tiff-v3.5.4
         # TODO: typeset
-        self.simple(
-            "consumer/jpeg/jpeg-6a",
-            "cjpeg",
-            source_files=[
-                *jpeg_core,
-                # sources for the app
-                "cjpeg.c",
-                "rdppm.c",
-                "rdgif.c",
-                "rdtarga.c",
-                "rdrle.c",
-                "rdbmp.c",
-                "rdswitch.c",
-                "cdjpeg.c",
-            ],
-        )
+        # self.simple(
+        #     "consumer/jpeg/jpeg-6a",
+        #     "cjpeg",
+        #     source_files=[
+        #         *jpeg_core,
+        #         # sources for the app
+        #         "cjpeg.c",
+        #         "rdppm.c",
+        #         "rdgif.c",
+        #         "rdtarga.c",
+        #         "rdrle.c",
+        #         "rdbmp.c",
+        #         "rdswitch.c",
+        #         "cdjpeg.c",
+        #     ],
+        # )
         # self.simple(
         #     "consumer/jpeg/jpeg-6a",
         #     "djpeg",
@@ -346,7 +341,9 @@ class MiBench(Suite):
         self.workspace.shell(
             "git",
             "clone",
-            "https://github.com/embecosm/mibench.git",
+            # Clone from my version of mibench, as it has patches to make the benchmarks run longer.
+            # It also has patches to fix various bugs in this suite.
+            "https://github.com/nickwanninger/mibench.git",
             self.src,
             "--depth",
             "1",
