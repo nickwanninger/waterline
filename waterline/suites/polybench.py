@@ -1,4 +1,4 @@
-from waterline import Suite, Benchmark, Workspace
+from waterline import Suite, Benchmark, Workspace, Linker
 from waterline.utils import run_command
 from pathlib import Path
 import waterline.utils
@@ -71,7 +71,8 @@ class PolyBenchBenchmark(Benchmark):
             output,
         )
 
-    def link(self, object: Path, output: Path):
+    def link(self, object: Path, output: Path, linker: Linker):
+        # todo: linker
         self.shell("clang", object, "-lm", "-o", output)
 
 

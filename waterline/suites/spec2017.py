@@ -1,4 +1,4 @@
-from waterline import Suite, Benchmark
+from waterline import Suite, Benchmark, Linker
 from pathlib import Path
 import shutil
 
@@ -19,7 +19,8 @@ class SpecBenchmark(Benchmark):
             output,
         )
 
-    def link(self, object: Path, output: Path):
+    def link(self, object: Path, output: Path, linker: Linker):
+        # todo: linker
         self.shell("clang++", object, "-lm", "-lstdc++", "-lpthread", "-o", output)
 
 

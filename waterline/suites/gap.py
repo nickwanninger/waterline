@@ -1,4 +1,4 @@
-from waterline import Suite, Benchmark, Workspace, RunConfiguration
+from waterline import Suite, Benchmark, Workspace, RunConfiguration, Linker
 from waterline.utils import run_command
 from pathlib import Path
 
@@ -17,7 +17,8 @@ class GAPBenchmark(Benchmark):
             output,
         )
 
-    def link(self, object: Path, output: Path):
+    def link(self, object: Path, output: Path, linker: Linker):
+        # todo: use linker
         self.shell(
             "clang++",
             object,

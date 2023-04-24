@@ -37,6 +37,6 @@ class Runner:
                 cwd=cwd,
             )
             res = proc.wait()
-            print(res)
+            # print(res)
             end = time.time()
         return end - start

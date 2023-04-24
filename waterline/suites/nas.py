@@ -1,4 +1,4 @@
-from waterline import Suite, Benchmark, Workspace, RunConfiguration
+from waterline import Suite, Benchmark, Workspace, RunConfiguration, Linker
 from waterline.utils import run_command
 from pathlib import Path
 import waterline.utils
@@ -27,8 +27,9 @@ class NASBenchmark(Benchmark):
         compiled = self.suite.src / "bin" / (self.name + "." + self.suite.suite_class)
         shutil.copy(compiled, output)
 
-    def link(self, object: Path, dest: Path):
-        self.shell("clang", "-fPIC", "-lm", "-fopenmp", object, "-o", dest)
+    def link(self, object: Path, dest: Path, linker: Linker):
+        # todo: use linker
+        linker.link(self.suite.workspace, [object], dest, args=["-fPIC", "-lm", "-fopenmp"])
 
 
 class NAS(Suite):

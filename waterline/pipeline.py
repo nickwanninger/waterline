@@ -2,9 +2,9 @@ from pathlib import Path
 import shutil
 from .utils import shell
 from .suite import Benchmark
+from .linker import Linker
 from . import jobs
 from typing import Tuple, List
-
 
 def _should_run(input: Path, output: Path) -> bool:
     """Given an input and an output, check if the input is newer than the output"""
@@ -44,21 +44,27 @@ class StageJob(jobs.Job):
 
 
 class LinkJob(jobs.Job):
-    def __init__(self, name: str, bench: Benchmark, input: Path, output: Path):
+    def __init__(self, name: str, bench: Benchmark, input: Path, output: Path, linker):
         super().__init__(name)
         self.bench = bench
         self.input = input
         self.output = output
+        self.linker = linker
 
     def run(self):
         if _should_run(self.input, self.output):
-            self.bench.link_bitcode(self.input, self.output)
+            self.bench.link_bitcode(self.input, self.output, self.linker)
 
 
 class Pipeline:
     def __init__(self, name: str):
         self.name = name
         self.stages: List[Tuple[Stage, str]] = []
+        self.linker = None
+
+
+    def set_linker(self, linker):
+        self.linker = linker
 
     def add_stage(self, stage: Stage, name=None):
         self.stages.append((stage, name))
@@ -73,6 +79,11 @@ class Pipeline:
             if i == len(self.stages) - 1:
                 output = output_bc
             io.append((input, output))
+
+        linker = self.linker
+        if linker is None:
+            linker = Linker()
+
         for i, ((inp, outp), (stage, name)) in enumerate(zip(io, self.stages)):
             yield StageJob(f"stage {i+1}: {name}", stage, inp, outp)
 
@@ -82,4 +93,5 @@ class Pipeline:
             bench,
             output_bc,
             bench.suite.bin / bench.name / self.name,
+            linker
         )

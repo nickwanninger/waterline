@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import List
 from .run import RunConfiguration
+from .linker import Linker
 from . import jobs
 
 
@@ -95,13 +96,13 @@ class Benchmark:
         """
         pass
 
-    def link(self, object: Path, destination: Path):
+    def link(self, object: Path, destination: Path, linker: Linker):
         """
         Link an object file of this benchmark into a complete executable.
         """
         print(f"link {object} to {destination} not implemented")
 
-    def link_bitcode(self, bitcode: Path, destination: Path):
+    def link_bitcode(self, bitcode: Path, destination: Path, linker: Linker):
         """
         Compile a bitcode file to an object file, then link the object file to the destination
         using `self.link()`
@@ -109,7 +110,7 @@ class Benchmark:
         object = bitcode.parent / (bitcode.stem + ".o")
         self.shell("llc", "-relocation-model=pic", "-O3", bitcode, "--filetype=obj", "-o", object)
 
-        self.link(object, destination)
+        self.link(object, destination, linker)
         pass
 
     def shell(self, *args):
