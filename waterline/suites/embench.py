@@ -26,7 +26,12 @@ class EmbenchBenchmark(Benchmark):
         source = self.suite.src / 'src' / self.source
 
 
-        source_files = []
+        source_files = [
+            f'{self.suite.src}/config/native/boards/default/boardsupport.c',
+            f'{self.suite.src}/config/native/chips/default/chipsupport.c',
+            f'{self.suite.src}/support/main.c',
+            f'{self.suite.src}/support/beebsc.c',
+        ]
         for filename in os.listdir(source):
             f_root, ext = os.path.splitext(filename)
             if ext == '.c':
@@ -42,12 +47,8 @@ class EmbenchBenchmark(Benchmark):
             f'-I{self.suite.src}/config/native',
             '-lm',
             '-DCPU_MHZ=1',
-            '-DWARMUP_HEAT=20',
+            '-DWARMUP_HEAT=1',
             *baseline_flags,
-            f'{self.suite.src}/config/native/boards/default/boardsupport.c',
-            f'{self.suite.src}/config/native/chips/default/chipsupport.c',
-            f'{self.suite.src}/support/main.c',
-            f'{self.suite.src}/support/beebsc.c',
             *source_files,
             "-o",
             output,
