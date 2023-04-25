@@ -59,6 +59,8 @@ class Workspace:
 
     def add_pipeline(self, pipeline):
         self.pipelines[pipeline.name] = pipeline
+    def clear_pipelines(self):
+        self.pipelines = {}
 
     def prepare(self):
         """Prepare this workspace to have bitcode pipeline applied."""

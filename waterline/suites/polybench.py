@@ -72,8 +72,7 @@ class PolyBenchBenchmark(Benchmark):
         )
 
     def link(self, object: Path, output: Path, linker: Linker):
-        # todo: linker
-        self.shell("clang", object, "-lm", "-o", output)
+        linker.link(self.suite.workspace, [object], output, args=["-lm"])
 
 
 class PolyBench(Suite):
