@@ -3,7 +3,6 @@ from waterline.utils import run_command
 from pathlib import Path
 import waterline.utils
 import shutil
-from typing import Tuple
 
 
 baseline_flags = [
@@ -15,7 +14,7 @@ baseline_flags = [
 ]
 
 
-polybench_benchmarks: Tuple[str, str] = [
+polybench_benchmarks = [
     ("datamining/correlation/correlation.c", "correlation"),
     ("datamining/covariance/covariance.c", "covariance"),
     ("linear-algebra/kernels/2mm/2mm.c", "2mm"),
@@ -54,7 +53,7 @@ class PolyBenchBenchmark(Benchmark):
         super().__init__(suite, name)
         self.source = source
 
-    def compile(self, output: Path):
+    def compile(self, output):
         source_file = self.suite.src / self.source
         self.shell(
             "gclang",
@@ -71,7 +70,7 @@ class PolyBenchBenchmark(Benchmark):
             output,
         )
 
-    def link(self, object: Path, output: Path, linker: Linker):
+    def link(self, object, output, linker):
         linker.link(self.suite.workspace, [object], output, args=["-lm"])
 
 

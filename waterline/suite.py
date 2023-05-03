@@ -1,24 +1,7 @@
 from pathlib import Path
-from typing import List
 from .run import RunConfiguration
-from .linker import Linker
 from . import jobs
-
-
-class JobRunner:
-    pass
-
-
-class ShellRunner(JobRunner):
-    pass
-
-
-class TimeRunner(JobRunner):
-    pass
-
-
-class CondorRunner(JobRunner):
-    pass
+import shutil
 
 
 class Suite:
@@ -37,7 +20,7 @@ class Suite:
         Initialize the benchmark suite with a context and a name
         """
         self.workspace = workspace
-        self.benchmarks: List[Benchmark] = []
+        self.benchmarks = []
 
         self.src = self.workspace.src_dir / self.name
         self.bin = self.workspace.bin_dir / self.name
@@ -56,7 +39,7 @@ class Suite:
         """
         print(f"acquire suite {self.name} to {self.src}")
 
-    def add_benchmark(self, benchmark, name: str, *args, **kwargs):
+    def add_benchmark(self, benchmark, name, *args, **kwargs):
         self.benchmarks.append(benchmark(self, name, *args, **kwargs))
 
     def compile_jobs(self):
@@ -78,9 +61,13 @@ class Suite:
                     bin_file,
                 )
 
+    def apply_patch(self, name):
+        patches = Path(__file__).parent / "patches"
+        shutil.copytree(patches / name, self.src, dirs_exist_ok=True)
+
 
 class Benchmark:
-    def __init__(self, suite: Suite, name: str):
+    def __init__(self, suite, name):
         self.suite = suite
         self.name = name
 
@@ -90,28 +77,36 @@ class Benchmark:
     def run_configs(self):
         yield RunConfiguration(self.name)
 
-    def compile(self, output: Path):
+    def compile(self, output):
         """
         Compile this benchmark to a certain output file
         """
         pass
 
-    def link(self, object: Path, destination: Path, linker: Linker):
+    def link(self, object, destination, linker):
         """
         Link an object file of this benchmark into a complete executable.
         """
         print(f"link {object} to {destination} not implemented")
 
-    def link_bitcode(self, bitcode: Path, destination: Path, linker: Linker):
+    def link_bitcode(self, bitcode, destination, linker):
         """
         Compile a bitcode file to an object file, then link the object file to the destination
         using `self.link()`
         """
         object = bitcode.parent / (bitcode.stem + ".o")
-        self.shell("llc", "-relocation-model=pic", "-O3", bitcode, "--filetype=obj", "-o", object)
+        self.shell(
+            "llc",
+            "-relocation-model=pic",
+            "-O3",
+            bitcode,
+            "--filetype=obj",
+            "-o",
+            object,
+        )
 
         self.link(object, destination, linker)
         pass
 
-    def shell(self, *args):
-        self.suite.workspace.shell(*args)
+    def shell(self, *args, **kwargs):
+        self.suite.workspace.shell(*args, **kwargs)

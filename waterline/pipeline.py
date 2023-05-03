@@ -4,47 +4,56 @@ from .utils import shell
 from .suite import Benchmark
 from .linker import Linker
 from . import jobs
-from typing import Tuple, List
 
-def _should_run(input: Path, output: Path) -> bool:
+
+def _should_run(input, output) -> bool:
     """Given an input and an output, check if the input is newer than the output"""
     return not output.exists() or output.stat().st_mtime < input.stat().st_mtime
 
 
 class Stage:
-    def run(self, input: Path, output: Path):
+    def run(self, input, output, benchmark):
         shutil.copy(input, output)
 
 
 class OptStage(Stage):
-    def __init__(self, passes: List[str] = []):
+    def __init__(self, passes=[]):
         self.passes = passes
 
-    def run(self, input: Path, output: Path):
+    def run(self, input, output, benchmark):
         if _should_run(input, output):
             shell(f'opt {input} -o {output} {" ".join(self.passes)}')
             shell(f"llvm-dis {output}")
 
 
 class NopStage(Stage):
-    def run(self, input: Path, output: Path):
+    def run(self, input, output, benchmark):
         if _should_run(input, output) and input != output:
             shutil.copy(input, output)
 
 
 class StageJob(jobs.Job):
-    def __init__(self, name: str, stage: Stage, input: Path, output: Path):
+    """
+    A stage job simply runs a certain stage on a benchmark
+    """
+
+    def __init__(self, name, stage, input, output, bench):
         super().__init__(name)
         self.stage = stage
         self.in_bc = input
         self.out_bc = output
+        self.benchmark = bench
 
     def run(self):
-        self.stage.run(self.in_bc, self.out_bc)
+        self.stage.run(self.in_bc, self.out_bc, self.benchmark)
 
 
 class LinkJob(jobs.Job):
-    def __init__(self, name: str, bench: Benchmark, input: Path, output: Path, linker):
+    """
+    A link job is a job that links benchmarks
+    """
+
+    def __init__(self, name, bench, input, output, linker):
         super().__init__(name)
         self.bench = bench
         self.input = input
@@ -57,19 +66,18 @@ class LinkJob(jobs.Job):
 
 
 class Pipeline:
-    def __init__(self, name: str):
+    def __init__(self, name):
         self.name = name
-        self.stages: List[Tuple[Stage, str]] = []
+        self.stages = []
         self.linker = None
-
 
     def set_linker(self, linker):
         self.linker = linker
 
-    def add_stage(self, stage: Stage, name=None):
+    def add_stage(self, stage, name=None):
         self.stages.append((stage, name))
 
-    def jobs(self, input_bc: Path, output_bc: Path, bench: Benchmark) -> List[Stage]:
+    def jobs(self, input_bc, output_bc, bench):
         io = []
         for i, (stage, name) in enumerate(self.stages):
             input = input_bc.parent / f"{self.name}-stage{i - 1}.bc"
@@ -85,7 +93,7 @@ class Pipeline:
             linker = Linker()
 
         for i, ((inp, outp), (stage, name)) in enumerate(zip(io, self.stages)):
-            yield StageJob(f"stage {i+1}: {name}", stage, inp, outp)
+            yield StageJob(f"stage {i+1}: {name}", stage, inp, outp, bench)
 
         # Create a link job
         yield LinkJob(
@@ -93,5 +101,5 @@ class Pipeline:
             bench,
             output_bc,
             bench.suite.bin / bench.name / self.name,
-            linker
+            linker,
         )

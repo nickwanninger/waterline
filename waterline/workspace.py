@@ -1,24 +1,33 @@
 from pathlib import Path
 from .suite import Suite
 from .pipeline import Pipeline, NopStage
-from typing import Tuple, List, Dict, Optional
 from . import jobs
 import waterline.utils
 import subprocess
 from .run import Runner
 
+from rich.progress import (
+    Progress,
+    TextColumn,
+    BarColumn,
+    TimeElapsedColumn,
+    MofNCompleteColumn,
+)
+
+import pandas as pd
+
 
 class Workspace:
-    suites: List[Suite] = []
+    suites = []
 
-    dir: Path
-    src_dir: Path
-    bin_dir: Path
-    ir_dir: Path
+    dir = None
+    src_dir = None
+    bin_dir = None
+    ir_dir = None
 
-    pipelines: Dict[str, Pipeline] = {}
+    pipelines = {}
 
-    def __init__(self, dir: str):
+    def __init__(self, dir):
         self.dir = Path(dir).absolute()
         # make sure the workspace directory exists.
         self.dir.mkdir(exist_ok=True)
@@ -59,6 +68,7 @@ class Workspace:
 
     def add_pipeline(self, pipeline):
         self.pipelines[pipeline.name] = pipeline
+
     def clear_pipelines(self):
         self.pipelines = {}
 
@@ -112,7 +122,7 @@ class Workspace:
             runner.title = "extract bitcode"
             runner.run()
 
-    def run_pipeline(self, pipeline: Pipeline):
+    def run_pipeline(self, pipeline):
         """Run a pipeline over the bitcodes of each benchmark in this workspace"""
         # Make sure everything is setup!
         self.prepare()
@@ -134,40 +144,74 @@ class Workspace:
 
             runner.run(parallel=False)
 
-    def run(self, pipeline_names: Optional[List[str]] = None, runs=1, runner=Runner()):
+    def run(
+        self,
+        pipeline_names=None,
+        runs=1,
+        runner=Runner(),
+        compile=True,
+    ):
         if pipeline_names is None:
             pipeline_names = self.pipelines.keys()
 
-        pipelines: List[Pipeline] = [self.pipelines[name] for name in pipeline_names]
+        pipelines = [self.pipelines[name] for name in pipeline_names]
 
-        for pl in pipelines:
-            self.run_pipeline(pl)
+        if compile:
+            for pl in pipelines:
+                self.run_pipeline(pl)
 
         configs = []
         for benchmark in self.benchmarks():
             for config in benchmark.run_configs():
                 configs.append((benchmark, config))
-        print(f"benchmark,{','.join(map(lambda p: p.name, pipelines))}")
-        for benchmark, config in configs:
-            dir: Path = benchmark.suite.bin / benchmark.name
-            for i in range(runs):
-                times = []
-                for pipeline in pipelines:
-                    binary = dir / pipeline.name
-                    if not binary.exists():
-                        raise RuntimeError("binary does not exist!")
-                    time = runner.run(self, config, binary)
-                    times.append(time)
-                print(
-                    f"{benchmark.suite.name}.{config.name},{','.join(map(str, times))}"
-                )
 
-    def shell(self, *args):
+        results = {"suite": [], "benchmark": [], "config": []}
+
+        title = "Running"
+        with Progress(
+            # TaskProgressColumn(),
+            TimeElapsedColumn(),
+            TextColumn(f"{title:20s}"),
+            BarColumn(),
+            MofNCompleteColumn(),
+            TextColumn("[progress.description]{task.description}"),
+        ) as progress:
+            task = progress.add_task(
+                "Running", total=len(configs) * runs * len(pipelines)
+            )
+
+            for benchmark, config in configs:
+                dir: Path = benchmark.suite.bin / benchmark.name
+                for pipeline in pipelines:
+                    for i in range(runs):
+                        binary = dir / pipeline.name
+                        if not binary.exists():
+                            continue
+                            # raise RuntimeError("binary does not exist!")
+                        progress.update(
+                            task,
+                            description=f"{benchmark.suite.name}.{benchmark.name} | {pipeline.name} | {i}/{runs}",
+                        )
+                        out = runner.run(self, config, binary)
+                        progress.update(task, advance=1, description="")
+
+                        results["suite"].append(benchmark.suite.name)
+                        results["benchmark"].append(
+                            config.name
+                        )  # config.name is the name of the variant of the benchmark
+                        results["config"].append(pipeline.name)
+                        for key in out:
+                            if key not in results:
+                                results[key] = []
+                            results[key].append(out[key])
+        return pd.DataFrame(results)
+
+    def shell(self, *args, **kwargs):
         # print('running: ', *args)
         with open(self.dir / "output.txt", "a+") as out:
             out.write("\n\n")
             out.write("$ " + " ".join(map(str, args)) + "\n")
             out.flush()
-            proc = subprocess.Popen(args, stdout=out, stderr=out)
+            proc = subprocess.Popen(args, stdout=out, stderr=out, **kwargs)
             if not proc.wait() == 0:
                 raise RuntimeError("failed to run", *args)

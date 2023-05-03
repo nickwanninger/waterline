@@ -3,8 +3,6 @@ from waterline.utils import run_command
 from pathlib import Path
 import waterline.utils
 import shutil
-from typing import Tuple
-
 
 baseline_flags = [
     "-O1",
@@ -16,7 +14,7 @@ baseline_flags = [
 
 
 class NASBenchmark(Benchmark):
-    def compile(self, output: Path):
+    def compile(self, output):
         """
         Compile this benchmark to a certain output directory
         """
@@ -27,15 +25,17 @@ class NASBenchmark(Benchmark):
         compiled = self.suite.src / "bin" / (self.name + "." + self.suite.suite_class)
         shutil.copy(compiled, output)
 
-    def link(self, object: Path, dest: Path, linker: Linker):
+    def link(self, object, dest, linker):
         # todo: use linker
-        linker.link(self.suite.workspace, [object], dest, args=["-fPIC", "-lm", "-fopenmp"])
+        linker.link(
+            self.suite.workspace, [object], dest, args=["-fPIC", "-lm", "-fopenmp"]
+        )
 
 
 class NAS(Suite):
     name = "NAS"
 
-    def configure(self, enable_openmp: bool = True, suite_class: str = "B"):
+    def configure(self, enable_openmp=True, suite_class="B"):
         self.enable_openmp = enable_openmp
         self.suite_class = suite_class
 
@@ -58,6 +58,7 @@ class NAS(Suite):
             "--depth",
             "1",
         )
+        self.apply_patch("NAS")
         # This is really gross. TODO: refactor this!
         (self.src / "bin").mkdir(exist_ok=True)
         make_def_path = self.src / "config" / "make.def"

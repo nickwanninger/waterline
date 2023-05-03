@@ -2,7 +2,6 @@ from waterline import Suite, Benchmark, Workspace, RunConfiguration, Linker
 from waterline.utils import run_command
 from pathlib import Path
 import shutil
-from typing import List
 
 
 class MiBenchSimple(Benchmark):
@@ -13,30 +12,22 @@ class MiBenchSimple(Benchmark):
     source_files = []
     compile_flags = []
 
-    runs: List[RunConfiguration] = []
+    runs = []
 
-    def __init__(self, suite, name, source: Path, **kwargs):
+    def __init__(self, suite, name, source, **kwargs):
         super().__init__(suite, name)
         self.source: Path = self.suite.src / source
         self.__dict__.update(kwargs)
 
     def compile(self, output: Path):
-        print(f"compile {self.name}")
         self.shell(
             "sh",
             "-c",
             f"cd {self.source}; {self.compiler} -I. -lm -O1 {' '.join(self.compile_flags)} {' '.join(self.source_files)} -o {output}",
         )
 
-    def link(self, object: Path, output: Path):
-        self.shell(
-            self.linker,
-            "-lm",
-            *self.linker_flags,
-            object,
-            "-o",
-            output,
-        )
+    def link(self, object, output, linker):
+        linker.link(self.suite.workspace, [object], output, args=self.linker_flags)
 
     def run_configs(self):
         for run in self.runs:
@@ -54,7 +45,7 @@ class MiBenchMakefile(Benchmark):
         self.output_binary = bin
         self.__dict__.update(kwargs)
 
-    def compile(self, output: Path):
+    def compile(self, output):
         print(f"compile {self.name}")
         self.shell(
             "sh",
@@ -63,7 +54,7 @@ class MiBenchMakefile(Benchmark):
         )
         shutil.copy(self.source / self.output_binary, output)
 
-    def link(self, object: Path, output: Path):
+    def link(self, object, output):
         self.shell(
             self.linker,
             "-lm",
@@ -348,3 +339,5 @@ class MiBench(Suite):
             "--depth",
             "1",
         )
+
+        self.apply_patch("MiBench")

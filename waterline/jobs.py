@@ -1,4 +1,3 @@
-import subprocess
 import multiprocessing
 from rich.progress import (
     Progress,
@@ -30,7 +29,6 @@ class FunctionJob(Job):
 
 
 class JobRunner:
-
     jobs = []
 
     def __init__(self, title=""):

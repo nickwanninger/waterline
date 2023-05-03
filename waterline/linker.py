@@ -1,5 +1,5 @@
-from typing import List
 from pathlib import Path
+
 
 class Linker:
     """
@@ -12,12 +12,10 @@ class Linker:
     """
 
     # self.command: the linker command
-    command = 'clang++'
+    command = "clang++"
     # self.args: additional arguments to be passed to the linker
     args = []
 
-    def link(self, ws, objects: List[Path], output: Path, args: List[str] = []):
+    def link(self, ws, objects, output, args):
         # it's pretty safe to link using clang++.
-        ws.shell(self.command, *args, *self.args, *objects, '-o', output)
-        pass
-
+        ws.shell(self.command, *args, *self.args, *objects, "-o", output)

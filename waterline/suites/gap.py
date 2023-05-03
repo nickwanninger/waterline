@@ -4,29 +4,32 @@ from pathlib import Path
 
 
 class GAPBenchmark(Benchmark):
-    def compile(self, output: Path):
+    def compile(self, output):
         source_file = self.suite.src / "src" / (self.name + ".cc")
+
+        args = []
+
+        if not self.suite.enable_exceptions:
+            args.append("-fno-exceptions")
+        if self.suite.enable_openmp:
+            args.append("-fopenmp")
         self.shell(
             "gclang++",
             source_file,
-            "-fopenmp",
             "-std=c++11",
             "-O1",
             "-Wall",
+            *args,
             "-o",
             output,
         )
 
-    def link(self, object: Path, output: Path, linker: Linker):
-        # todo: use linker
-        self.shell(
-            "clang++",
-            object,
-            "-fopenmp",
-            "-std=c++11",
-            "-Wall",
-            "-o",
+    def link(self, object, output, linker):
+        linker.link(
+            self.suite.workspace,
+            [object],
             output,
+            args=["-fopenmp", "-lm", "-lstdc++", "-lpthread"],
         )
 
     def run_configs(self):
@@ -36,8 +39,9 @@ class GAPBenchmark(Benchmark):
 class GAP(Suite):
     name = "GAP"
 
-    def configure(self, enable_openmp: bool = True):
+    def configure(self, enable_openmp=True, enable_exceptions=True):
         self.enable_openmp = enable_openmp
+        self.enable_exceptions = enable_exceptions
 
         self.add_benchmark(GAPBenchmark, "bc")
         self.add_benchmark(GAPBenchmark, "bfs")
