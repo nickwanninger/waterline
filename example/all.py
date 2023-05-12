@@ -1,5 +1,5 @@
 import waterline as wl
-import waterline.suites
+import waterline.suites as suites
 import waterline.utils
 import waterline.pipeline
 from pathlib import Path
@@ -9,13 +9,14 @@ import pandas as pd
 space = wl.Workspace("ws")
 
 
-# space.add_suite(wl.suites.NAS, enable_openmp=False, suite_class="A")
-# space.add_suite(wl.suites.GAP, enable_exceptions=False, enable_openmp=False)
-# space.add_suite(wl.suites.PolyBench, size="SMALL")
-# space.add_suite(wl.suites.MiBench)
-# space.add_suite(wl.suites.SPEC2017, tar="/home/nick/SPEC2017.tar.gz", config="test")
-space.add_suite(wl.suites.Embench, iters=10000)
-# space.add_suite(wl.suites.Stockfish)
+space.add_suite(suites.NAS, enable_openmp=False, suite_class="W")
+space.add_suite(suites.GAP, enable_exceptions=False, enable_openmp=False)
+space.add_suite(suites.PolyBench, size="SMALL")
+space.add_suite(suites.MiBench)
+space.add_suite(suites.SPEC2017,
+                tar="/home/nick/SPEC2017.tar.gz", config="test")
+space.add_suite(suites.Embench, iters=100)
+space.add_suite(suites.Stockfish)
 
 space.prepare()
 

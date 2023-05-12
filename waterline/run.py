@@ -16,11 +16,6 @@ class RunConfiguration:
         self.env = env
         self.cwd = cwd
 
-    def __repr__(self):
-        return (
-            f"RunConfiguration({self.name}, args={self.args}, dir={self.working_dir})"
-        )
-
 
 def _run(config, binary, send):
     cwd = os.getcwd() if config.cwd is None else config.cwd
