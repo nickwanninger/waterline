@@ -36,7 +36,8 @@ class SpecBenchmark(Benchmark):
                 pass
             last_line = line
         # hack: get the arguments :I
-        args = last_line.split("peak.gclang ")[1].split(" ")
+        args = last_line.split("peak.gclang ")[1].strip().split(" ")
+        print(self.name, args)
         yield RunConfiguration(self.name, args=args, cwd=rundir)
 
     def link(self, object, output, linker):
@@ -57,19 +58,19 @@ class SPEC2017(Suite):
         self.tarball = Path(tar)
         self.config = config
         # Integer
-        # self.add_benchmark(SpecBenchmark, "600.perlbench_s", "perlbench_s")
-        # self.add_benchmark(SpecBenchmark, "602.gcc_s", "sgcc")
+        self.add_benchmark(SpecBenchmark, "600.perlbench_s", "perlbench_s")
+        self.add_benchmark(SpecBenchmark, "602.gcc_s", "sgcc")
         self.add_benchmark(SpecBenchmark, "605.mcf_s", "mcf_s")
-        # self.add_benchmark(SpecBenchmark, "620.omnetpp_s", "omnetpp_s")
-        # self.add_benchmark(SpecBenchmark, "623.xalancbmk_s", "xalancbmk_s")
+        self.add_benchmark(SpecBenchmark, "620.omnetpp_s", "omnetpp_s")
+        self.add_benchmark(SpecBenchmark, "623.xalancbmk_s", "xalancbmk_s")
         self.add_benchmark(SpecBenchmark, "625.x264_s", "x264_s")
         self.add_benchmark(SpecBenchmark, "631.deepsjeng_s", "deepsjeng_s")
-        # self.add_benchmark(SpecBenchmark, "641.leela_s", "leela_s")
+        self.add_benchmark(SpecBenchmark, "641.leela_s", "leela_s")
         self.add_benchmark(SpecBenchmark, "657.xz_s", "xz_s")
         # # Floating Point
-        self.add_benchmark(SpecBenchmark, "619.lbm_s", "lbm_s"),
-        self.add_benchmark(SpecBenchmark, "638.imagick_s", "imagick_s"),
-        self.add_benchmark(SpecBenchmark, "644.nab_s", "nab_s"),
+        # self.add_benchmark(SpecBenchmark, "619.lbm_s", "lbm_s"),
+        # self.add_benchmark(SpecBenchmark, "638.imagick_s", "imagick_s"),
+        # self.add_benchmark(SpecBenchmark, "644.nab_s", "nab_s"),
 
     def acquire(self):
         # the path to the SPEC2017 support folder

@@ -41,6 +41,7 @@ def _run(config, binary, send):
     out["major"] = usage.ru_majflt
     out["minor"] = usage.ru_minflt
     out["maxrss"] = usage.ru_maxrss
+    out["status"] = res
     send.send(out)
 
 
