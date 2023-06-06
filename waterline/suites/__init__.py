@@ -8,3 +8,4 @@ from .embench import Embench
 
 # Misc 'benchmarks'
 from .stockfish import Stockfish
+from .sqlite_tpch import SqliteTPCH
