@@ -18,5 +18,7 @@ install: build
 publish: build
 	. venv/bin/activate && python3 -m twine upload --repository pypi dist/*
 
-example: venv
+example: venv FORCE
 	. venv/bin/activate && python3 -m example.all
+
+FORCE:
