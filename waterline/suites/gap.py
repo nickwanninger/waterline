@@ -33,15 +33,17 @@ class GAPBenchmark(Benchmark):
         )
 
     def run_configs(self):
-        yield RunConfiguration(self.name, args=["-g", "14"])
+
+        yield RunConfiguration(self.name, args=["-g", self.suite.graph_size])
 
 
 class GAP(Suite):
     name = "GAP"
 
-    def configure(self, enable_openmp=True, enable_exceptions=True):
+    def configure(self, enable_openmp=True, enable_exceptions=True, graph_size=14):
         self.enable_openmp = enable_openmp
         self.enable_exceptions = enable_exceptions
+        self.graph_size = graph_size
 
         self.add_benchmark(GAPBenchmark, "bc")
         self.add_benchmark(GAPBenchmark, "bfs")
