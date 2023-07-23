@@ -6,6 +6,9 @@ import waterline.utils
 import subprocess
 from .run import Runner
 
+import time
+import os
+
 from rich.progress import (
     Progress,
     TextColumn,
@@ -40,6 +43,9 @@ class Workspace:
 
         self.ir_dir = self.dir / "ir"
         self.ir_dir.mkdir(exist_ok=True)
+
+        self.results_dir = self.dir / "results"
+        self.results_dir.mkdir(exist_ok=True)
 
         baseline = Pipeline("baseline")
         baseline.add_stage(NopStage())
@@ -167,6 +173,13 @@ class Workspace:
 
         results = {"suite": [], "benchmark": [], "config": []}
 
+
+        output_name = time.strftime('%b-%d-%Y--%H-%M-%S')
+        result_dir = self.results_dir / output_name
+        result_csv = result_dir / f'all.csv'
+        result_dir.mkdir(exist_ok=False)
+
+
         title = "Running"
         with Progress(
             # TaskProgressColumn(),
@@ -204,7 +217,56 @@ class Workspace:
                             if key not in results:
                                 results[key] = []
                             results[key].append(out[key])
-        return pd.DataFrame(results)
+                        # save progress data somewhere for safe keeping.
+                        prog = pd.DataFrame(results)
+                        prog.reset_index(drop=True, inplace=True)
+                        prog.to_csv(result_csv, index=False)
+
+        
+        # Postprocess the results and save the results into different metric csv files
+        results = pd.DataFrame(results)
+
+        metrics = []
+        # print(results)
+        for metric in results.columns:
+            # We don't use an index, so these are columns we should avoid.
+            if metric in ['suite', 'benchmark', 'config']:
+                continue
+            metrics.append(metric)
+
+        for metric in metrics:
+            # write the raw pivot table out. This doesn't have any statistics information, but gives something easy to plot.
+            df = results.pivot_table(index=['suite', 'benchmark'], columns='config', values=metric).reset_index()
+            df.to_csv(result_dir / f'{metric}.csv', index=False)
+
+
+        # Now, split the raw data for each configuration and write them to $metric.$config.csv. This file will just be
+        # a single column of the raw data of each run at a given metric.
+        for benchmark, config in configs:
+            for pipeline in pipelines:
+                df = results[ results['suite'] == benchmark.suite.name].loc[results['benchmark'] == config.name].loc[results['config'] == pipeline.name]
+
+
+                outdir = result_dir / benchmark.suite.name / config.name / pipeline.name
+                outdir.mkdir(exist_ok=True, parents=True)
+                for metric in metrics:
+                    df[metric].to_csv(outdir / f'{metric}.csv', index=False, header=False)
+            # Now make `suite/benchmark/metric.csv` with columns for each configuration.
+            for metric in metrics:
+                merged = pd.DataFrame()
+                for pipeline in pipelines:
+                    df = pd.read_csv(result_dir / benchmark.suite.name / config.name / pipeline.name / f'{metric}.csv', header=None)
+                    merged[pipeline.name] = df
+                merged.to_csv(result_dir / benchmark.suite.name / config.name / f'{metric}.csv', index=False)
+
+
+
+        # symlink the output directory to 'latest'
+        output = self.results_dir / 'latest'
+        if output.exists():
+            os.remove(output)
+        os.symlink(result_dir, output)
+        return results
 
     def shell(self, *args, **kwargs):
         # print('running: ', *args)
