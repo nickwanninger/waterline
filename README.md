@@ -5,8 +5,6 @@ Install waterline:
 ```
 pip3 install --user waterline
 ```
-You will also need LLVM and gclang installed. You can find gclang here: 
-
 
 Using waterline to build and run NAS benchmarks:
 ```python
