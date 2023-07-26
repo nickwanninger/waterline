@@ -37,7 +37,7 @@ class SqliteTPCHBenchmark(Benchmark):
         )
 
     def run_configs(self):
-        for i in range(1, 23):
+        for i in self.suite.configs:
             print(i)
             yield RunConfiguration(f'Q{i}', args=[self.suite.src / "TPC-H.db", self.suite.src / f"queries/{i}.sql"])
 
@@ -45,7 +45,8 @@ class SqliteTPCHBenchmark(Benchmark):
 class SqliteTPCH(Suite):
     name = "Sqlite-TPC-H"
 
-    def configure(self):
+    def configure(self, configs=list(range(1, 23)):
+        self.configs = configs
         self.add_benchmark(SqliteTPCHBenchmark, "sqlite-tpch")
         pass
 
