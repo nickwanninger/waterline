@@ -45,7 +45,7 @@ class SqliteTPCHBenchmark(Benchmark):
 class SqliteTPCH(Suite):
     name = "Sqlite-TPC-H"
 
-    def configure(self, configs=list(range(1, 23)):
+    def configure(self, configs=list(range(1, 23))):
         self.configs = configs
         self.add_benchmark(SqliteTPCHBenchmark, "sqlite-tpch")
         pass
