@@ -21,4 +21,8 @@ publish: build
 example: venv FORCE
 	. venv/bin/activate && python3 -m example.all
 
+
+post_install: venv FORCE
+	. venv/bin/activate && python3 -m example.post_install
+
 FORCE:

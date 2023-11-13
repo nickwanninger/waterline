@@ -91,6 +91,7 @@ class Workspace:
             for suite in self.suites:
                 if not suite.src.exists():
                     runner.add(jobs.FunctionJob(f"acquire {suite.name}", suite.acquire))
+                    runner.add(jobs.FunctionJob(f"post acquire {suite.name}", suite.post_acquire))
             runner.title = "acquire suites"
             runner.run(parallel=True)
 

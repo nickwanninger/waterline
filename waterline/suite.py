@@ -26,11 +26,16 @@ class Suite:
         self.bin = self.workspace.bin_dir / self.name
         self.ir = self.workspace.ir_dir / self.name
 
+        self.post_installs = []
+
+
     def configure(self, *args, **kwargs):
         """
         Called by the Workspace to initialize this benchmark suite with
         """
         pass
+
+
 
     def acquire(self):
         """
@@ -38,6 +43,10 @@ class Suite:
         This function also emits
         """
         print(f"acquire suite {self.name} to {self.src}")
+
+    # Called after acquisition. No suites should implement this, it's for the user to override via inheritance.
+    def post_acquire(self):
+        pass
 
     def add_benchmark(self, benchmark, name, *args, **kwargs):
         self.benchmarks.append(benchmark(self, name, *args, **kwargs))
