@@ -179,7 +179,7 @@ class Workspace:
         output_name = run_name # time.strftime('%b-%d-%Y--%H-%M-%S')
         result_dir = self.results_dir / output_name
         result_csv = result_dir / f'all.csv'
-        result_dir.mkdir(exist_ok=False)
+        result_dir.mkdir(exist_ok=True)
 
 
         title = "Running"
