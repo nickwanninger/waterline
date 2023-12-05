@@ -74,7 +74,7 @@ pl.add_stage(waterline.pipeline.OptStage(["-O3"]), name="Apply O3")
 space.add_pipeline(pl)
 
 
-results = space.run(runner=PerfRunner(), runs=3)
+results = space.run(run_name="myrun", runner=PerfRunner(), runs=3)
 # results.reset_index(drop=True, inplace=True)
 # print(results)
 # results.to_csv("out.csv", index=False)

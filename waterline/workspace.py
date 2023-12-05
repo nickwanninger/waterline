@@ -157,6 +157,7 @@ class Workspace:
         runs=1,
         runner=Runner(),
         compile=True,
+        run_name=time.strftime('%b-%d-%Y--%H-%M-%S'),
     ):
         if pipeline_names is None:
             pipeline_names = self.pipelines.keys()
@@ -175,7 +176,7 @@ class Workspace:
         results = {"suite": [], "benchmark": [], "config": []}
 
 
-        output_name = time.strftime('%b-%d-%Y--%H-%M-%S')
+        output_name = run_name # time.strftime('%b-%d-%Y--%H-%M-%S')
         result_dir = self.results_dir / output_name
         result_csv = result_dir / f'all.csv'
         result_dir.mkdir(exist_ok=False)
