@@ -1,3 +1,0 @@
-recursive-include waterline/suites/SPEC2017 *
-recursive-include waterline/suites/Embench *
-recursive-include waterline/patches *

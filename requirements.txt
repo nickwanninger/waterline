@@ -1,5 +1,0 @@
-setuptools
-rich
-requests
-pandas
-twine
