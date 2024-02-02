@@ -15,6 +15,6 @@ impl Task {
 #[macro_export]
 macro_rules! task {
     ($($arg:expr),* $(,)?) => {
-        Task::new(vec![$($arg.into()),*])
+        $crate::task::Task::new(vec![$($arg.into()),*])
     }
 }
