@@ -19,7 +19,7 @@ publish: build
 	. venv/bin/activate && python3 -m twine upload --repository pypi dist/*
 
 example: venv FORCE
-	. venv/bin/activate && python3 -m example.all
+	. venv/bin/activate && python3 -m example.small
 
 
 post_install: venv FORCE
