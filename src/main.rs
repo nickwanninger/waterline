@@ -1,4 +1,8 @@
+#[tokio::main]
+async fn main() {
+    let mut ws = waterline::Workspace::new("bench");
 
-fn main() {
-    waterline::task!["ls"];
+    ws.add_suite(waterline::Polybench {});
+
+    ws.acquire().await;
 }

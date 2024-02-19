@@ -4,11 +4,9 @@ pub mod workspace;
 
 pub mod suites;
 pub mod benchmark;
-pub mod task;
-
+pub mod config;
 
 // Re-export important parts of the waterline library.
-pub use workspace::Workspace;
-pub use benchmark::Suite;
-pub use benchmark::Benchmark;
-pub use task::*;
+pub use workspace::*;
+pub use benchmark::*;
+pub use config::*;
