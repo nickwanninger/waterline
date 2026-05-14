@@ -1,6 +1,31 @@
+import json
 import shlex
 import shutil
 from pathlib import Path
+
+
+def _copy_run_inputs(dest_dir: Path, config):
+    if config.cwd is None:
+        return
+
+    cwd = Path(config.cwd)
+    copied = set()
+    for arg in config.args:
+        arg_path = Path(arg)
+        if arg_path.is_absolute():
+            continue
+
+        source = cwd / arg_path
+        if not source.exists() or source in copied:
+            continue
+
+        copied.add(source)
+        dest = dest_dir / arg_path
+        dest.parent.mkdir(exist_ok=True, parents=True)
+        if source.is_dir():
+            shutil.copytree(source, dest, dirs_exist_ok=True)
+        else:
+            shutil.copy2(source, dest)
 
 
 def _write_run_script(path: Path, binary_name: str, config):
@@ -10,10 +35,7 @@ def _write_run_script(path: Path, binary_name: str, config):
     for key, value in config.env.items():
         lines.append(f"export {key}={shlex.quote(str(value))}")
 
-    if config.cwd is not None:
-        lines.append(f"cd {shlex.quote(str(config.cwd))}")
-    else:
-        lines.append('cd "$SELF"')
+    lines.append('cd "$SELF"')
 
     args_str = " ".join(shlex.quote(str(a)) for a in config.args)
     cmd = f'"$SELF"/{binary_name}'
@@ -21,6 +43,21 @@ def _write_run_script(path: Path, binary_name: str, config):
 
     path.write_text("\n".join(lines) + "\n")
     path.chmod(0o755)
+
+
+def _write_config_json(path: Path, suite_name: str, benchmark_name: str, pipeline_names, configurations):
+    path.write_text(
+        json.dumps(
+            {
+                "suite": suite_name,
+                "benchmark": benchmark_name,
+                "pipelines": pipeline_names,
+                "configurations": configurations,
+            },
+            indent=2,
+        )
+        + "\n"
+    )
 
 
 def _write_run_all_script(path: Path, entries):
@@ -68,28 +105,54 @@ def archive_workspace(workspace, output_dir, pipeline_names=None):
 
     for suite in workspace.suites:
         for benchmark in suite.benchmarks:
-            for config in benchmark.run_configs():
-                for pipeline in pipelines:
-                    binary = suite.bin / benchmark.name / pipeline.name
-                    if not binary.exists():
-                        continue
+            configs = list(benchmark.run_configs())
+            archived_pipelines = []
+            config_data = {
+                config.name: {
+                    "name": config.name,
+                    "args": list(config.args),
+                    "cwd": ".",
+                    "env": dict(config.env),
+                    "scripts": {},
+                }
+                for config in configs
+            }
 
-                    dest_dir = output_dir / suite.name / benchmark.name
-                    dest_dir.mkdir(exist_ok=True, parents=True)
+            for pipeline in pipelines:
+                binary = suite.bin / benchmark.name / pipeline.name
+                if not binary.exists():
+                    continue
 
-                    dest_binary = dest_dir / pipeline.name
-                    shutil.copy2(binary, dest_binary)
-                    dest_binary.chmod(0o755)
+                dest_dir = output_dir / suite.name / benchmark.name
+                dest_dir.mkdir(exist_ok=True, parents=True)
 
-                    script_name = f"run_{pipeline.name}.sh"
+                dest_binary = dest_dir / pipeline.name
+                shutil.copy2(binary, dest_binary)
+                dest_binary.chmod(0o755)
+                archived_pipelines.append(pipeline.name)
+
+                for config in configs:
+                    _copy_run_inputs(dest_dir, config)
+
+                    script_name = f"run_{config.name}_{pipeline.name}.sh"
                     script = dest_dir / script_name
                     _write_run_script(script, pipeline.name, config)
+                    config_data[config.name]["scripts"][pipeline.name] = script_name
 
                     if config.name == benchmark.name:
                         label = f"{suite.name}/{benchmark.name}/{pipeline.name}"
                     else:
                         label = f"{suite.name}/{benchmark.name}/{config.name}/{pipeline.name}"
                     entries.append((label, f"{suite.name}/{benchmark.name}/{script_name}"))
+
+            if archived_pipelines:
+                _write_config_json(
+                    dest_dir / "config.json",
+                    suite.name,
+                    benchmark.name,
+                    archived_pipelines,
+                    [config_data[config.name] for config in configs],
+                )
 
     _write_run_all_script(output_dir / "run_all.sh", entries)
     return output_dir

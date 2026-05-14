@@ -245,7 +245,12 @@ class MiBench(Suite):
 
         # NETWORK
         # TODO: patricia
-        self.simple("network/dijkstra", "dijkstra", source_files=["dijkstra_large.c"])
+        self.simple(
+            "network/dijkstra",
+            "dijkstra",
+            source_files=["dijkstra_large.c"],
+            runs=[RunConfiguration("dijkstra", args=["input.dat"])],
+        )
         # self.simple(
         #     "network/patricia",
         #     "patricia",
