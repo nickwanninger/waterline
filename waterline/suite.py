@@ -104,8 +104,11 @@ class Benchmark:
         using `self.link()`
         """
         object = bitcode.parent / (bitcode.stem + ".o")
+        target = self.suite.workspace.target
+        llc_target_flags = target.llc_flags if target else []
         self.shell(
             "llc",
+            *llc_target_flags,
             "-relocation-model=pic",
             "-O3",
             bitcode,

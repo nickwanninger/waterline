@@ -27,10 +27,10 @@ class NASBenchmark(Benchmark):
         shutil.copy(compiled, output)
 
     def link(self, object, dest, linker):
-        # todo: use linker
-        linker.link(
-            self.suite.workspace, [object], dest, args=["-fPIC", "-lm", "-fopenmp"]
-        )
+        args = ["-fPIC", "-lm"]
+        if self.suite.enable_openmp:
+            args.append("-fopenmp")
+        linker.link(self.suite.workspace, [object], dest, args=args)
 
 
 class NAS(Suite):
@@ -72,8 +72,11 @@ class NAS(Suite):
                 cfg.write(f"CFLAGS = {' '.join(baseline_flags)} -fPIC -fopenmp\n")
             else:
                 cfg.write(f"CFLAGS = {' '.join(baseline_flags)} -fPIC\n")
-            cfg.write("CLINKFLAGS = -fPIC -lm -fopenmp\n")
-            cfg.write("UCC = cc -O\n")
+            if self.enable_openmp:
+                cfg.write("CLINKFLAGS = -fPIC -lm -fopenmp\n")
+            else:
+                cfg.write("CLINKFLAGS = -fPIC -lm\n")
+            cfg.write("UCC = cc -O -Wno-implicit-int\n")
             cfg.write("BINDIR	= ../bin\n")
             cfg.write("RAND	= randdp\n")
             cfg.write("WTIME	= wtime.c\n")

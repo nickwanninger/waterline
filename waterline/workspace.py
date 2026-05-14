@@ -30,7 +30,8 @@ class Workspace:
 
     pipelines = {}
 
-    def __init__(self, dir):
+    def __init__(self, dir, target=None):
+        self.target = target
         self.dir = Path(dir).absolute()
         # make sure the workspace directory exists.
         self.dir.mkdir(exist_ok=True)
@@ -46,6 +47,11 @@ class Workspace:
 
         self.results_dir = self.dir / "results"
         self.results_dir.mkdir(exist_ok=True)
+
+        self._tools_dir = None
+        self._cc_wrapper = None
+        if target is not None:
+            self._tools_dir, self._cc_wrapper = target.setup_workspace(self.dir)
 
         baseline = Pipeline("baseline")
         baseline.add_stage(NopStage())
@@ -270,8 +276,19 @@ class Workspace:
         os.symlink(result_dir, output)
         return results
 
+    @property
+    def link_command(self):
+        """Cross-linker command when a cross-compilation target is active, else None."""
+        return str(self._cc_wrapper) if self._cc_wrapper else None
+
     def shell(self, *args, **kwargs):
-        # print('running: ', *args)
+        if self.target and "env" not in kwargs:
+            env = os.environ.copy()
+            if self._cc_wrapper:
+                env["LLVM_CC_NAME"] = str(self._cc_wrapper)
+            if self._tools_dir:
+                env["PATH"] = str(self._tools_dir) + ":" + env.get("PATH", "")
+            kwargs["env"] = env
         with open(self.dir / "output.txt", "a+") as out:
             out.write("\n\n")
             out.write("$ " + " ".join(map(str, args)) + "\n")

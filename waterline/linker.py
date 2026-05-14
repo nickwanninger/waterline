@@ -17,5 +17,9 @@ class Linker:
     args = []
 
     def link(self, ws, objects, output, args):
-        # it's pretty safe to link using clang++.
-        ws.shell(self.command, *args, *self.args, *objects, "-o", output)
+        if ws.link_command:
+            # Cross-compilation: use the workspace's wrapper (flags already baked in)
+            ws.shell(ws.link_command, *args, *self.args, *objects, "-o", output)
+        else:
+            target_flags = ws.target.linker_flags if ws.target else []
+            ws.shell(self.command, *args, *target_flags, *self.args, *objects, "-o", output)

@@ -57,12 +57,12 @@ class PerfRunner(Runner):
 
 space = wl.Workspace("ws")
 
-space.add_suite(suites.NAS, enable_openmp=False, suite_class="W")
+# space.add_suite(suites.NAS, enable_openmp=False, suite_class="W")
 # space.add_suite(suites.GAP, enable_exceptions=False, enable_openmp=False)
 # space.add_suite(suites.PolyBench, size="SMALL")
 # space.add_suite(suites.MiBench)
-# space.add_suite(suites.SPEC2017, tar="/home/nick/SPEC2017.tar.gz", config="test",
-#                 disabled=[600, 602, 620, 623, 625, 631, 641, 657, 619, 638, 644])
+space.add_suite(suites.SPEC2017, tar="/home/nick/SPEC2017.tar.gz", config="test",
+                disabled=[600, 602, 620, 623, 625, 631, 641, 657, 619, 638, 644])
 # space.add_suite(suites.Embench, iters=100)
 # space.add_suite(suites.Stockfish)
 # space.add_suite(suites.SqliteTPCH)
