@@ -5,6 +5,7 @@ from .suite import Suite, Benchmark
 from .run import RunConfiguration, Runner
 from .linker import Linker
 from .target import Target
+from .archive import archive_workspace
 
 # __all__ = ["Workspace", "Suite", "Benchmark",
 #            "RunConfiguration", "Runner", "Linker", "suites"]

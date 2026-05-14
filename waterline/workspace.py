@@ -5,6 +5,7 @@ from . import jobs
 import waterline.utils
 import subprocess
 from .run import Runner
+from .archive import archive_workspace
 
 import time
 import os
@@ -275,6 +276,21 @@ class Workspace:
             os.remove(output)
         os.symlink(result_dir, output)
         return results
+
+    def archive(self, output_dir, pipeline_names=None, compile=True):
+        """
+        Compile benchmarks through each pipeline (unless compile=False), then
+        copy the binaries and run-scripts into output_dir. The result is a
+        self-contained directory ready to tarball and transfer to a target host.
+        """
+        if pipeline_names is None:
+            pipeline_names = list(self.pipelines.keys())
+
+        if compile:
+            for name in pipeline_names:
+                self.run_pipeline(self.pipelines[name])
+
+        return archive_workspace(self, output_dir, pipeline_names=pipeline_names)
 
     @property
     def link_command(self):
