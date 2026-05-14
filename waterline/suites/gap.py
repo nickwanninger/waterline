@@ -25,12 +25,10 @@ class GAPBenchmark(Benchmark):
         )
 
     def link(self, object, output, linker):
-        linker.link(
-            self.suite.workspace,
-            [object],
-            output,
-            args=["-fopenmp", "-lm", "-lstdc++", "-lpthread"],
-        )
+        args = ["-lm", "-lstdc++", "-lpthread"]
+        if self.suite.enable_openmp:
+            args.append("-fopenmp")
+        linker.link(self.suite.workspace, [object], output, args=args)
 
     def run_configs(self):
 

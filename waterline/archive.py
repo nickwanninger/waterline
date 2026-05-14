@@ -3,7 +3,8 @@ import shutil
 from pathlib import Path
 
 
-def _write_run_script(path: Path, binary_rel: str, config):
+def _write_run_script(path: Path, binary_name: str, config):
+    # The script and binary live in the same directory.
     lines = ["#!/bin/sh", 'SELF="$(cd "$(dirname "$0")" && pwd)"']
 
     for key, value in config.env.items():
@@ -15,7 +16,7 @@ def _write_run_script(path: Path, binary_rel: str, config):
         lines.append('cd "$SELF"')
 
     args_str = " ".join(shlex.quote(str(a)) for a in config.args)
-    cmd = f'"$SELF"/{binary_rel}'
+    cmd = f'"$SELF"/{binary_name}'
     lines.append(f"exec {cmd} {args_str}" if args_str else f"exec {cmd}")
 
     path.write_text("\n".join(lines) + "\n")
@@ -82,8 +83,7 @@ def archive_workspace(workspace, output_dir, pipeline_names=None):
 
                     script_name = f"run_{pipeline.name}.sh"
                     script = dest_dir / script_name
-                    binary_rel = f"{suite.name}/{benchmark.name}/{pipeline.name}"
-                    _write_run_script(script, binary_rel, config)
+                    _write_run_script(script, pipeline.name, config)
 
                     if config.name == benchmark.name:
                         label = f"{suite.name}/{benchmark.name}/{pipeline.name}"

@@ -51,8 +51,9 @@ class Workspace:
 
         self._tools_dir = None
         self._cc_wrapper = None
+        self._cxx_wrapper = None
         if target is not None:
-            self._tools_dir, self._cc_wrapper = target.setup_workspace(self.dir)
+            self._tools_dir, self._cc_wrapper, self._cxx_wrapper = target.setup_workspace(self.dir)
 
         baseline = Pipeline("baseline")
         baseline.add_stage(NopStage())
@@ -302,6 +303,8 @@ class Workspace:
             env = os.environ.copy()
             if self._cc_wrapper:
                 env["LLVM_CC_NAME"] = str(self._cc_wrapper)
+            if self._cxx_wrapper:
+                env["LLVM_CXX_NAME"] = str(self._cxx_wrapper)
             if self._tools_dir:
                 env["PATH"] = str(self._tools_dir) + ":" + env.get("PATH", "")
             kwargs["env"] = env

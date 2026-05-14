@@ -23,13 +23,16 @@ class MiBenchSimple(Benchmark):
         self.shell(
             "sh",
             "-c",
-            f"cd {self.source}; {self.compiler} -I. -lm -O1 {' '.join(self.compile_flags)} {' '.join(self.source_files)} -o {output}",
+            f"cd {self.source}; {self.compiler} -I. -lm -O1 -std=gnu11 -Wno-implicit-function-declaration -Wno-implicit-int {' '.join(self.compile_flags)} {' '.join(self.source_files)} -o {output}",
         )
 
     def link(self, object, output, linker):
-        linker.link(self.suite.workspace, [object], output, args=self.linker_flags)
+        linker.link(self.suite.workspace, [object], output, args=["-lm", *self.linker_flags])
 
     def run_configs(self):
+        if not self.runs:
+            yield RunConfiguration(self.name, cwd=self.source)
+            return
         for run in self.runs:
             run.cwd = self.source
             yield run

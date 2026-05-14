@@ -7,12 +7,13 @@ from pathlib import Path
 
 class Target:
     def __init__(self, triple, sysroot=None, llc_flags=None,
-                 toolchain_prefix=None, unwrapped_cc=None):
+                 toolchain_prefix=None, unwrapped_cc=None, dynamic_linker=None):
         self.triple = triple
         self.sysroot = sysroot
         self._llc_flags = llc_flags or []
         self.toolchain_prefix = Path(toolchain_prefix) if toolchain_prefix else None
         self.unwrapped_cc = unwrapped_cc
+        self.dynamic_linker = dynamic_linker
 
     def _detect_unwrapped_clang(self):
         """Find the real clang binary when the in-PATH version is a Nix cc-wrapper."""
@@ -61,16 +62,6 @@ class Target:
                         return str(versions[-1])
         return None
 
-    def _gcc_runtime_dir(self):
-        """Return the GCC cross-runtime directory for this toolchain, or None."""
-        if not self.toolchain_prefix:
-            return None
-        gcc_lib = self.toolchain_prefix / "lib" / "gcc" / self.triple
-        if not gcc_lib.exists():
-            return None
-        versions = sorted(gcc_lib.iterdir())
-        return versions[-1] if versions else None
-
     def setup_workspace(self, workspace_dir):
         """
         Create cross-compilation helper scripts in workspace_dir/cross-tools/.
@@ -87,18 +78,25 @@ class Target:
             flags += ["-resource-dir", resource_dir]
         if self.sysroot:
             flags.append(f"--sysroot={self.sysroot}")
+        if self.dynamic_linker:
+            flags.append(f"-Wl,--dynamic-linker,{self.dynamic_linker}")
         if self.toolchain_prefix:
+            flags.append(f"--gcc-toolchain={self.toolchain_prefix}")
             ld = self.toolchain_prefix / "bin" / f"{self.triple}-ld"
             if ld.exists():
                 flags.append(f"-fuse-ld={ld}")
-            gcc_rt = self._gcc_runtime_dir()
-            if gcc_rt:
-                flags += [f"-L{gcc_rt}", f"-B{gcc_rt}"]
 
         flags_str = " ".join(shlex.quote(f) for f in flags)
+
         wrapper = tools_dir / "cross-cc"
         wrapper.write_text(f"#!/bin/sh\nexec {cc} {flags_str} \"$@\"\n")
         wrapper.chmod(0o755)
+
+        # C++ wrapper: same flags, clang++ instead of clang
+        cxx = cc.replace("/clang", "/clang++", 1) if cc.endswith("/clang") else cc + "++"
+        cxx_wrapper = tools_dir / "cross-cxx"
+        cxx_wrapper.write_text(f"#!/bin/sh\nexec {cxx} {flags_str} \"$@\"\n")
+        cxx_wrapper.chmod(0o755)
 
         # Shadow the native objcopy with the cross-target version so gllvm
         # can embed bitcode into cross-compiled (non-x86) object files.
@@ -108,7 +106,7 @@ class Target:
             if rv_objcopy.exists() and not local_objcopy.exists():
                 local_objcopy.symlink_to(rv_objcopy)
 
-        return tools_dir, wrapper
+        return tools_dir, wrapper, cxx_wrapper
 
     @property
     def llc_flags(self):
@@ -123,7 +121,8 @@ class Target:
         return flags
 
     @classmethod
-    def riscv64gc(cls, toolchain_prefix="/opt/riscv", sysroot=None, unwrapped_cc=None):
+    def riscv64gc(cls, toolchain_prefix="/opt/riscv", sysroot=None, unwrapped_cc=None,
+                  dynamic_linker="/lib/ld-linux-riscv64-lp64d.so.1"):
         prefix = Path(toolchain_prefix)
         if sysroot is None:
             sysroot = str(prefix / "sysroot")
@@ -132,5 +131,6 @@ class Target:
             sysroot=sysroot,
             toolchain_prefix=str(prefix),
             unwrapped_cc=unwrapped_cc,
+            dynamic_linker=dynamic_linker,
             llc_flags=["-mcpu=generic-rv64", "-mattr=+m,+a,+f,+d,+c"],
         )
