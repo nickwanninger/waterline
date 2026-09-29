@@ -13,5 +13,6 @@ if [ ! -d "${BUILD_DIR}/SPEC2017" ]; then
 fi
 cd SPEC2017
 source shrc
-runcpu -D --loose --size $2 --tune peak -a setup --config gclang $1
+CONFIG=${3:-gclang}
+runcpu -D --loose --size $2 --tune peak -a setup --config $CONFIG $1
 echo "DONE installing SPEC2017 at \"${BUILD_DIR}/SPEC2017\"" 

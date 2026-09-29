@@ -9,6 +9,7 @@ fi
 cd SPEC2017 ;
 printf 'yes' | ./install.sh ;
 cp ${PWD_PATH}/patches/gclang.cfg ${PWD_PATH}/SPEC2017/config/ ;
+cp ${PWD_PATH}/patches/cross_gclang.cfg ${PWD_PATH}/SPEC2017/config/ ;
 cp ${PWD_PATH}/patches/pure_c_cpp_speed.bset ${PWD_PATH}/SPEC2017/benchspec/CPU/ ;
 cp ${PWD_PATH}/patches/pure_c_cpp_rate.bset ${PWD_PATH}/SPEC2017/benchspec/CPU/ ;
 

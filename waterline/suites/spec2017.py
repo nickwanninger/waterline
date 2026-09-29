@@ -11,8 +11,7 @@ class SpecBenchmark(Benchmark):
         self.bin = bin
 
     def compile(self, output: Path):
-        # print(f"compile spec {self.name}")
-        self.suite.run_support_script("compile", self.name, self.suite.config)
+        self.suite.run_support_script("compile", self.name, self.suite.config, self.suite.cfg_name)
 
         shutil.copy(
             self.suite.src
@@ -74,6 +73,7 @@ class SPEC2017(Suite):
             raise RuntimeError("No tarball supplied for SPEC2017.")
         self.tarball = Path(tar)
         self.config = config
+        self.cfg_name = "cross_gclang" if self.workspace.target else "gclang"
         for a, b in benchmarks:
             num = int(a.split('.')[0])
             if num in disabled:
