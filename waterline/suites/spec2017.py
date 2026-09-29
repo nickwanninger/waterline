@@ -21,7 +21,6 @@ class SpecBenchmark(Benchmark):
         )
 
     def run_configs(self):
-        # print('run config for', self.name)
         config = self.suite.config
         if config == "ref":
             config = "refspeed"
@@ -30,11 +29,14 @@ class SpecBenchmark(Benchmark):
             self.suite.src
             / f"SPEC2017/benchspec/CPU/{self.name}/run/run_peak_{config}_gclang.0000/"
         )
-        with open(rundir / "speccmds.cmd") as f:
+        speccmds = rundir / "speccmds.cmd"
+        if not speccmds.exists():
+            return
+
+        with open(speccmds) as f:
             for line in f:
                 pass
             last_line = line
-        # hack: get the arguments :I
         args = last_line.split("peak.gclang ")[1].strip().split(" ")
         print(self.name, args)
         yield RunConfiguration(self.name, args=args, cwd=rundir)
