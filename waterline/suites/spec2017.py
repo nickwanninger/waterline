@@ -1,7 +1,7 @@
 from waterline import Suite, Benchmark, Linker, RunConfiguration
 from pathlib import Path
 import shutil
-import os
+import re
 
 
 class SpecBenchmark(Benchmark):
@@ -90,6 +90,36 @@ class SPEC2017(Suite):
             "chmod +x -R SPEC2017/bin SPEC2017/tools SPEC2017/*.sh"
         )
         self.run_support_script("install")
+        self._patch_sources()
+
+    def _patch_sources(self):
+        spec = self.src / "SPEC2017" / "benchspec" / "CPU"
+
+        # 623.xalancbmk_s shares source with 523.xalancbmk_r.
+        # XalanOtherEncodingWriter has two wrong member names that old compilers
+        # accepted via lax template instantiation but modern clang rejects.
+        xalan = spec / "523.xalancbmk_r/src/xalanc/XMLSupport/XalanOtherEncodingWriter.hpp"
+        if xalan.exists():
+            self._patch_file(xalan, [
+                ("m_isPresentable", "m_predicate"),
+                ("writeNumberedEntityReference", "writeNumericCharacterReference"),
+            ])
+
+        # 620.omnetpp_s shares source with 520.omnetpp_r.
+        # Several files use the 'register' storage class removed in C++17.
+        omnet_src = spec / "520.omnetpp_r" / "src"
+        if omnet_src.exists():
+            for f in list(omnet_src.rglob("*.cc")) + list(omnet_src.rglob("*.h")):
+                text = f.read_text()
+                patched = re.sub(r'\bregister\b(\s)', r'\1', text)
+                if patched != text:
+                    f.write_text(patched)
+
+    def _patch_file(self, path, substitutions):
+        text = path.read_text()
+        for old, new in substitutions:
+            text = text.replace(old, new)
+        path.write_text(text)
 
     def run_support_command(self, command):
         self.workspace.shell("sh", "-c", f"cd {self.src}; {command}")
